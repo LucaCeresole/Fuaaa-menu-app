@@ -1,11 +1,36 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 
 const OrderConfirmation = () => {
   const { orderId } = useParams();
+  const [showNotification, setShowNotification] = useState(true);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setShowNotification(false);
+    }, 5000);
+    return () => clearTimeout(timer);
+  }, []);
 
   return (
     <div>
+      {showNotification && (
+        <div
+          style={{
+            position: 'fixed',
+            top: '20px',
+            right: '20px',
+            backgroundColor: '#27ae60',
+            color: '#fff',
+            padding: '10px 20px',
+            borderRadius: '5px',
+            zIndex: 1000,
+            boxShadow: '0 2px 5px rgba(0, 0, 0, 0.2)'
+          }}
+        >
+          ¡Tu pedido #{orderId} ha sido recibido!
+        </div>
+      )}
       <h1>¡Pedido Confirmado!</h1>
       <p>Tu pedido ha sido recibido con éxito.</p>
       <p><strong>ID del Pedido:</strong> {orderId}</p>

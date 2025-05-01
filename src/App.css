@@ -36,6 +36,12 @@ h3 {
   color: #34495e;
 }
 
+h4 {
+  font-size: 1.2rem;
+  margin-bottom: 10px;
+  color: #34495e;
+}
+
 p {
   margin-bottom: 15px;
   font-size: 1.1rem;
@@ -91,4 +97,11 @@ button:hover {
 
 a:hover {
   background-color: #34495e;
+}
+
+.dashboard-items ul li {
+  background: none;
+  box-shadow: none;
+  padding: 5px 0;
+  margin-bottom: 5px;
 }

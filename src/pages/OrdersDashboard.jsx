@@ -5,11 +5,12 @@ import { collection, query, where, getDocs, doc, updateDoc } from 'firebase/fire
 const OrdersDashboard = () => {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [filter, setFilter] = useState('pending');
 
   useEffect(() => {
     const fetchOrders = async () => {
       try {
-        const q = query(collection(db, 'orders'), where('status', '==', 'pending'));
+        const q = query(collection(db, 'orders'), where('status', '==', filter));
         const querySnapshot = await getDocs(q);
         const ordersList = querySnapshot.docs.map(doc => ({
           id: doc.id,
@@ -23,7 +24,7 @@ const OrdersDashboard = () => {
       }
     };
     fetchOrders();
-  }, []);
+  }, [filter]);
 
   const handleCompleteOrder = async (orderId) => {
     try {
@@ -42,9 +43,22 @@ const OrdersDashboard = () => {
 
   return (
     <div>
-      <h1>Pedidos Pendientes</h1>
+      <h1>Pedidos</h1>
+      <div style={{ marginBottom: '20px' }}>
+        <label>
+          Filtrar por estado:
+          <select
+            value={filter}
+            onChange={(e) => setFilter(e.target.value)}
+            style={{ marginLeft: '10px', padding: '5px' }}
+          >
+            <option value="pending">Pendientes</option>
+            <option value="completed">Completados</option>
+          </select>
+        </label>
+      </div>
       {orders.length === 0 ? (
-        <p>No hay pedidos pendientes.</p>
+        <p>No hay pedidos {filter === 'pending' ? 'pendientes' : 'completados'}.</p>
       ) : (
         <ul>
           {orders.map(order => (
@@ -61,20 +75,22 @@ const OrdersDashboard = () => {
                 ))}
               </ul>
               <p><strong>Fecha:</strong> {new Date(order.timestamp.seconds * 1000).toLocaleString()}</p>
-              <button
-                onClick={() => handleCompleteOrder(order.id)}
-                style={{
-                  padding: '8px 16px',
-                  backgroundColor: '#27ae60',
-                  color: '#fff',
-                  border: 'none',
-                  borderRadius: '5px',
-                  cursor: 'pointer',
-                  marginTop: '10px'
-                }}
-              >
-                Marcar como Completado
-              </button>
+              {filter === 'pending' && (
+                <button
+                  onClick={() => handleCompleteOrder(order.id)}
+                  style={{
+                    padding: '8px 16px',
+                    backgroundColor: '#27ae60',
+                    color: '#fff',
+                    border: 'none',
+                    borderRadius: '5px',
+                    cursor: 'pointer',
+                    marginTop: '10px'
+                  }}
+                >
+                  Marcar como Completado
+                </button>
+              )}
             </li>
           ))}
         </ul>

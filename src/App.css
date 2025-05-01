@@ -109,3 +109,15 @@ a:hover {
 .complete-button:hover {
   background-color: #219653 !important;
 }
+
+select {
+  padding: 8px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 1rem;
+  cursor: pointer;
+}
+
+select:hover {
+  border-color: #34495e;
+}

@@ -38,6 +38,7 @@ h3 {
 
 p {
   margin-bottom: 15px;
+  font-size: 1.1rem;
 }
 
 ul {
@@ -86,4 +87,8 @@ button:hover {
 
 .modal-content button:hover {
   opacity: 0.9;
+}
+
+a:hover {
+  background-color: #34495e;
 }

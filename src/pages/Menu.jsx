@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { db } from '../services/firebase';
 import { collection, getDocs, addDoc } from 'firebase/firestore';
+import { useNavigate } from 'react-router-dom';
 
 const Menu = () => {
   const [products, setProducts] = useState([]);
@@ -10,6 +11,7 @@ const Menu = () => {
   const [successMessage, setSuccessMessage] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
   const [showSummary, setShowSummary] = useState(false);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchProducts = async () => {
@@ -91,7 +93,7 @@ const Menu = () => {
     try {
       const orderItems = getOrderItems();
 
-      await addDoc(collection(db, 'orders'), {
+      const docRef = await addDoc(collection(db, 'orders'), {
         customerInfo: customerInfo.trim(),
         items: orderItems,
         total: calculateTotal(),
@@ -99,11 +101,10 @@ const Menu = () => {
         status: 'pending'
       });
 
-      setSuccessMessage('¡Pedido enviado con éxito!');
       setOrder({});
       setCustomerInfo('');
       setShowSummary(false);
-      setTimeout(() => setSuccessMessage(''), 3000);
+      navigate(`/order-confirmation/${docRef.id}`);
     } catch (error) {
       console.error('Error submitting order:', error);
       setErrorMessage('Error al enviar el pedido: ' + error.message);

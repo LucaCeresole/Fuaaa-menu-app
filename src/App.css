@@ -70,11 +70,15 @@ label {
 }
 
 input[type="text"],
-input[type="number"] {
+input[type="number"],
+input[type="email"],
+input[type="password"] {
   padding: 8px;
   border: 1px solid #ccc;
   border-radius: 4px;
   font-size: 1rem;
+  width: 100%;
+  max-width: 300px;
 }
 
 input[type="number"] {
@@ -120,4 +124,12 @@ select {
 
 select:hover {
   border-color: #34495e;
+}
+
+.login-button:hover {
+  background-color: #34495e !important;
+}
+
+.logout-button:hover {
+  background-color: #c0392b !important;
 }

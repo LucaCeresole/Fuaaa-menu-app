@@ -1,11 +1,14 @@
 import React, { useEffect, useState } from 'react';
-import { db } from '../services/firebase';
+import { useNavigate } from 'react-router-dom';
+import { db, auth } from '../services/firebase';
 import { collection, query, where, getDocs, doc, updateDoc } from 'firebase/firestore';
+import { signOut } from 'firebase/auth';
 
 const OrdersDashboard = () => {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('pending');
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchOrders = async () => {
@@ -37,6 +40,15 @@ const OrdersDashboard = () => {
     }
   };
 
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+      navigate('/login');
+    } catch (error) {
+      console.error('Error logging out:', error);
+    }
+  };
+
   if (loading) {
     return <div>Cargando pedidos...</div>;
   }
@@ -44,6 +56,20 @@ const OrdersDashboard = () => {
   return (
     <div>
       <h1>Pedidos</h1>
+      <button
+        onClick={handleLogout}
+        style={{
+          padding: '8px 16px',
+          backgroundColor: '#e74c3c',
+          color: '#fff',
+          border: 'none',
+          borderRadius: '5px',
+          cursor: 'pointer',
+          marginBottom: '20px'
+        }}
+      >
+        Cerrar Sesión
+      </button>
       <div style={{ marginBottom: '20px' }}>
         <label>
           Filtrar por estado:

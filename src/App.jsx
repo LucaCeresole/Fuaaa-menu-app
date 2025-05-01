@@ -1,14 +1,21 @@
 import React from 'react';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Home from './pages/Home';
 import Menu from './pages/Menu';
+import Navbar from './components/Navbar'
 import './App.css';
 
 const App = () => {
   return (
-    <div>
-      <Home />
-      <Menu />
-    </div>
+    <Router>
+      <div>
+        <Navbar />
+        <Routes>
+          <Route path="/" element={<Home />} />
+          <Route path="/menu" element={<Menu />} />
+        </Routes>
+      </div>
+    </Router>
   );
 };
 

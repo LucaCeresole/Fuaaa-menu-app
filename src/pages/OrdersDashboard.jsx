@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { db } from '../services/firebase';
-import { collection, query, where, getDocs } from 'firebase/firestore';
+import { collection, query, where, getDocs, doc, updateDoc } from 'firebase/firestore';
 
 const OrdersDashboard = () => {
   const [orders, setOrders] = useState([]);
@@ -24,6 +24,17 @@ const OrdersDashboard = () => {
     };
     fetchOrders();
   }, []);
+
+  const handleCompleteOrder = async (orderId) => {
+    try {
+      const orderRef = doc(db, 'orders', orderId);
+      await updateDoc(orderRef, { status: 'completed' });
+      setOrders(prev => prev.filter(order => order.id !== orderId));
+    } catch (error) {
+      console.error('Error updating order status:', error);
+      alert('Error al actualizar el estado del pedido: ' + error.message);
+    }
+  };
 
   if (loading) {
     return <div>Cargando pedidos...</div>;
@@ -50,6 +61,20 @@ const OrdersDashboard = () => {
                 ))}
               </ul>
               <p><strong>Fecha:</strong> {new Date(order.timestamp.seconds * 1000).toLocaleString()}</p>
+              <button
+                onClick={() => handleCompleteOrder(order.id)}
+                style={{
+                  padding: '8px 16px',
+                  backgroundColor: '#27ae60',
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: '5px',
+                  cursor: 'pointer',
+                  marginTop: '10px'
+                }}
+              >
+                Marcar como Completado
+              </button>
             </li>
           ))}
         </ul>

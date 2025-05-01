@@ -105,3 +105,7 @@ a:hover {
   padding: 5px 0;
   margin-bottom: 5px;
 }
+
+.complete-button:hover {
+  background-color: #219653 !important;
+}

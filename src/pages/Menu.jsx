@@ -6,7 +6,9 @@ const Menu = () => {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [order, setOrder] = useState({});
+  const [customerInfo, setCustomerInfo] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
+  const [errorMessage, setErrorMessage] = useState('');
 
   useEffect(() => {
     const fetchProducts = async () => {
@@ -33,13 +35,24 @@ const Menu = () => {
     }));
   };
 
+  const handleCustomerInfoChange = (e) => {
+    setCustomerInfo(e.target.value);
+    setErrorMessage('');
+  };
+
   const handleSubmitOrder = async (e) => {
     e.preventDefault();
+    setErrorMessage('');
     try {
+      if (!customerInfo.trim()) {
+        setErrorMessage('Por favor, ingresa tu nombre o número de mesa.');
+        return;
+      }
+
       const orderItems = Object.entries(order)
         .filter(([_, quantity]) => quantity > 0)
         .map(([productId, quantity]) => {
-          const product = products.find(prod => prod.id === productId); // Cambiamos 'p' por 'prod'
+          const product = products.find(prod => prod.id === productId);
           if (!product) {
             throw new Error(`Producto con ID ${productId} no encontrado`);
           }
@@ -47,11 +60,12 @@ const Menu = () => {
         });
 
       if (orderItems.length === 0) {
-        alert('Selecciona al menos un producto.');
+        setErrorMessage('Selecciona al menos un producto.');
         return;
       }
 
       await addDoc(collection(db, 'orders'), {
+        customerInfo: customerInfo.trim(),
         items: orderItems,
         timestamp: new Date(),
         status: 'pending'
@@ -59,10 +73,11 @@ const Menu = () => {
 
       setSuccessMessage('¡Pedido enviado con éxito!');
       setOrder({});
+      setCustomerInfo('');
       setTimeout(() => setSuccessMessage(''), 3000);
     } catch (error) {
       console.error('Error submitting order:', error);
-      alert('Error al enviar el pedido: ' + error.message);
+      setErrorMessage('Error al enviar el pedido: ' + error.message);
     }
   };
 
@@ -74,7 +89,21 @@ const Menu = () => {
     <div>
       <h1>Nuestro Menú</h1>
       {successMessage && <p style={{ color: 'green', textAlign: 'center' }}>{successMessage}</p>}
+      {errorMessage && <p style={{ color: 'red', textAlign: 'center' }}>{errorMessage}</p>}
       <form onSubmit={handleSubmitOrder}>
+        <div style={{ marginBottom: '20px' }}>
+          <label>
+            Nombre o Número de Mesa:
+            <input
+              type="text"
+              value={customerInfo}
+              onChange={handleCustomerInfoChange}
+              placeholder="Ej. Juan o Mesa 5"
+              style={{ marginLeft: '10px', padding: '5px', width: '200px' }}
+              required
+            />
+          </label>
+        </div>
         <ul>
           {products.map(product => (
             <li key={product.id}>
@@ -88,12 +117,25 @@ const Menu = () => {
                   min="0"
                   value={order[product.id] || 0}
                   onChange={(e) => handleQuantityChange(product.id, e.target.value)}
+                  style={{ marginLeft: '10px', padding: '5px', width: '60px' }}
                 />
               </label>
             </li>
           ))}
         </ul>
-        <button type="submit">Enviar Pedido</button>
+        <button
+          type="submit"
+          style={{
+            padding: '10px 20px',
+            backgroundColor: '#2c3e50',
+            color: '#fff',
+            border: 'none',
+            borderRadius: '5px',
+            cursor: 'pointer'
+          }}
+        >
+          Enviar Pedido
+        </button>
       </form>
       {products.length === 0 && <p>No hay productos disponibles.</p>}
     </div>

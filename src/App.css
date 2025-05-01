@@ -24,6 +24,12 @@ h1 {
   color: #2c3e50;
 }
 
+h2 {
+  font-size: 1.8rem;
+  margin-bottom: 15px;
+  color: #2c3e50;
+}
+
 h3 {
   font-size: 1.5rem;
   margin-bottom: 10px;
@@ -70,4 +76,14 @@ input[type="number"] {
 
 button:hover {
   background-color: #34495e;
+}
+
+.modal-content ul li {
+  background: none;
+  box-shadow: none;
+  padding: 5px 0;
+}
+
+.modal-content button:hover {
+  opacity: 0.9;
 }

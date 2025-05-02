@@ -31,23 +31,27 @@ const ProtectedRoute = ({ children }) => {
 
 const App = () => {
   return (
-    <Router>
-      <Navbar />
-      <Routes>
-        <Route path="/" element={<Home />} />
-        <Route path="/menu" element={<Menu />} />
-        <Route path="/order-confirmation/:orderId" element={<OrderConfirmation />} />
-        <Route path="/login" element={<Login />} />
-        <Route
-          path="/orders-dashboard"
-          element={
-            <ProtectedRoute>
-              <OrdersDashboard />
-            </ProtectedRoute>
-          }
-        />
-      </Routes>
-    </Router>
+    <div className="app-container">
+      <div className="app-content">
+        <Router>
+          <Navbar />
+          <Routes>
+            <Route path="/" element={<Home />} />
+            <Route path="/menu" element={<Menu />} />
+            <Route path="/order-confirmation/:orderId" element={<OrderConfirmation />} />
+            <Route path="/login" element={<Login />} />
+            <Route
+              path="/orders-dashboard"
+              element={
+                <ProtectedRoute>
+                  <OrdersDashboard />
+                </ProtectedRoute>
+              }
+            />
+          </Routes>
+        </Router>
+      </div>
+    </div>
   );
 };
 

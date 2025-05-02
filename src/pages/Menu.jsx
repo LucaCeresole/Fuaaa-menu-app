@@ -1,16 +1,17 @@
-import React, { useEffect, useState } from 'react';
-import { db } from '../services/firebase';
-import { collection, getDocs, addDoc } from 'firebase/firestore';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { db } from '../services/firebase';
+import { collection, getDocs, addDoc, serverTimestamp } from 'firebase/firestore';
 
 const Menu = () => {
   const [products, setProducts] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [order, setOrder] = useState({});
+  const [quantities, setQuantities] = useState({});
   const [customerInfo, setCustomerInfo] = useState('');
-  const [successMessage, setSuccessMessage] = useState('');
-  const [errorMessage, setErrorMessage] = useState('');
-  const [showSummary, setShowSummary] = useState(false);
+  const [showModal, setShowModal] = useState(false);
+  const [orderSummary, setOrderSummary] = useState([]);
+  const [total, setTotal] = useState(0);
+  const [errors, setErrors] = useState({});
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -22,219 +23,141 @@ const Menu = () => {
           ...doc.data()
         }));
         setProducts(productsList);
-        setLoading(false);
       } catch (error) {
         console.error('Error fetching products:', error);
-        setLoading(false);
       }
     };
     fetchProducts();
   }, []);
 
-  const handleQuantityChange = (productId, quantity) => {
-    setOrder(prev => ({
+  const handleQuantityChange = (productId, value) => {
+    setQuantities(prev => ({
       ...prev,
-      [productId]: parseInt(quantity) || 0
+      [productId]: Math.max(0, parseInt(value) || 0)
     }));
   };
 
-  const handleCustomerInfoChange = (e) => {
-    setCustomerInfo(e.target.value);
-    setErrorMessage('');
-  };
-
-  const calculateTotal = () => {
-    return Object.entries(order)
-      .reduce((total, [productId, quantity]) => {
-        if (quantity > 0) {
-          const product = products.find(prod => prod.id === productId);
-          return total + (product ? product.price * quantity : 0);
-        }
-        return total;
-      }, 0);
-  };
-
-  const getOrderItems = () => {
-    return Object.entries(order)
-      .filter(([_, quantity]) => quantity > 0)
-      .map(([productId, quantity]) => {
-        const product = products.find(prod => prod.id === productId);
-        if (!product) {
-          throw new Error(`Producto con ID ${productId} no encontrado`);
-        }
-        return { productId, name: product.name, quantity, price: product.price };
-      });
-  };
-
-  const handleSubmitOrder = async (e) => {
-    e.preventDefault();
-    setErrorMessage('');
-    try {
-      if (!customerInfo.trim()) {
-        setErrorMessage('Por favor, ingresa tu nombre o número de mesa.');
-        return;
-      }
-
-      const orderItems = getOrderItems();
-
-      if (orderItems.length === 0) {
-        setErrorMessage('Selecciona al menos un producto.');
-        return;
-      }
-
-      setShowSummary(true);
-    } catch (error) {
-      console.error('Error preparing order:', error);
-      setErrorMessage('Error al preparar el pedido: ' + error.message);
+  const validateForm = () => {
+    const newErrors = {};
+    if (customerInfo.trim().length < 3) {
+      newErrors.customerInfo = 'El nombre o mesa debe tener al menos 3 caracteres.';
     }
+    const selectedItems = Object.values(quantities).reduce((sum, qty) => sum + qty, 0);
+    if (selectedItems === 0) {
+      newErrors.items = 'Debes seleccionar al menos un producto.';
+    }
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
   };
 
-  const confirmOrder = async () => {
+  const handleReviewOrder = () => {
+    if (!validateForm()) return;
+
+    const summary = products
+      .filter(product => quantities[product.id] > 0)
+      .map(product => ({
+        productId: product.id,
+        name: product.name,
+        price: product.price,
+        quantity: quantities[product.id]
+      }));
+    const orderTotal = summary.reduce((sum, item) => sum + item.price * item.quantity, 0);
+    setOrderSummary(summary);
+    setTotal(orderTotal);
+    setShowModal(true);
+  };
+
+  const handleConfirmOrder = async () => {
+    setLoading(true);
     try {
-      const orderItems = getOrderItems();
-
-      const docRef = await addDoc(collection(db, 'orders'), {
-        customerInfo: customerInfo.trim(),
-        items: orderItems,
-        total: calculateTotal(),
-        timestamp: new Date(),
-        status: 'pending'
-      });
-
-      setOrder({});
+      const orderData = {
+        customerInfo,
+        items: orderSummary,
+        total,
+        status: 'pending',
+        timestamp: serverTimestamp()
+      };
+      const docRef = await addDoc(collection(db, 'orders'), orderData);
+      setShowModal(false);
+      setQuantities({});
       setCustomerInfo('');
-      setShowSummary(false);
       navigate(`/order-confirmation/${docRef.id}`);
     } catch (error) {
-      console.error('Error submitting order:', error);
-      setErrorMessage('Error al enviar el pedido: ' + error.message);
-      setShowSummary(false);
+      console.error('Error confirming order:', error);
+      alert('Error al confirmar el pedido: ' + error.message);
+    } finally {
+      setLoading(false);
     }
   };
 
-  const cancelOrder = () => {
-    setShowSummary(false);
-    setErrorMessage('');
-  };
-
-  if (loading) {
-    return <div>Cargando menú...</div>;
-  }
-
   return (
-    <div>
-      <h1>Nuestro Menú</h1>
-      {successMessage && <p style={{ color: 'green', textAlign: 'center' }}>{successMessage}</p>}
-      {errorMessage && <p style={{ color: 'red', textAlign: 'center' }}>{errorMessage}</p>}
-      <form onSubmit={handleSubmitOrder}>
-        <div style={{ marginBottom: '20px' }}>
-          <label>
-            Nombre o Número de Mesa:
-            <input
-              type="text"
-              value={customerInfo}
-              onChange={handleCustomerInfoChange}
-              placeholder="Ej. Juan o Mesa 5"
-              style={{ marginLeft: '10px', padding: '5px', width: '200px' }}
-              required
-            />
-          </label>
-        </div>
+    <div className="page-container">
+      <h1>Menú</h1>
+      <form>
+        <label>
+          Nombre o Mesa:
+          <input
+            type="text"
+            value={customerInfo}
+            onChange={(e) => setCustomerInfo(e.target.value)}
+            placeholder="Ej. Mesa 5"
+          />
+          {errors.customerInfo && <p style={{ color: 'red' }}>{errors.customerInfo}</p>}
+        </label>
+        <h2>Productos</h2>
         <ul>
           {products.map(product => (
             <li key={product.id}>
               <h3>{product.name}</h3>
-              <p>{product.description}</p>
               <p>Precio: ${product.price}</p>
               <label>
                 Cantidad:
                 <input
                   type="number"
                   min="0"
-                  value={order[product.id] || 0}
+                  value={quantities[product.id] || ''}
                   onChange={(e) => handleQuantityChange(product.id, e.target.value)}
-                  style={{ marginLeft: '10px', padding: '5px', width: '60px' }}
                 />
               </label>
             </li>
           ))}
         </ul>
+        {errors.items && <p style={{ color: 'red' }}>{errors.items}</p>}
         <button
-          type="submit"
-          style={{
-            padding: '10px 20px',
-            backgroundColor: '#2c3e50',
-            color: '#fff',
-            border: 'none',
-            borderRadius: '5px',
-            cursor: 'pointer'
-          }}
+          type="button"
+          onClick={handleReviewOrder}
+          disabled={loading}
+          className={loading ? 'loading' : ''}
         >
           Revisar Pedido
         </button>
       </form>
-      {products.length === 0 && <p>No hay productos disponibles.</p>}
 
-      {showSummary && (
-        <div
-          style={{
-            position: 'fixed',
-            top: '0',
-            left: '0',
-            width: '100%',
-            height: '100%',
-            backgroundColor: 'rgba(0, 0, 0, 0.5)',
-            display: 'flex',
-            justifyContent: 'center',
-            alignItems: 'center',
-            zIndex: 1000
-          }}
-        >
-          <div
-            style={{
-              backgroundColor: '#fff',
-              padding: '20px',
-              borderRadius: '10px',
-              maxWidth: '500px',
-              width: '90%'
-            }}
-          >
+      {showModal && (
+        <div className="modal">
+          <div className="modal-content">
             <h2>Resumen del Pedido</h2>
-            <p><strong>Nombre/Mesa:</strong> {customerInfo}</p>
+            <p><strong>Cliente/Mesa:</strong> {customerInfo}</p>
             <h3>Productos:</h3>
             <ul>
-              {getOrderItems().map(item => (
+              {orderSummary.map(item => (
                 <li key={item.productId}>
                   {item.name} x{item.quantity} - ${item.price * item.quantity}
                 </li>
               ))}
             </ul>
-            <p><strong>Total:</strong> ${calculateTotal()}</p>
-            <div style={{ marginTop: '20px', textAlign: 'center' }}>
+            <p><strong>Total:</strong> ${total}</p>
+            <div style={{ marginTop: '20px', display: 'flex', gap: '10px' }}>
               <button
-                onClick={confirmOrder}
-                style={{
-                  padding: '10px 20px',
-                  backgroundColor: '#2c3e50',
-                  color: '#fff',
-                  border: 'none',
-                  borderRadius: '5px',
-                  marginRight: '10px',
-                  cursor: 'pointer'
-                }}
+                onClick={handleConfirmOrder}
+                disabled={loading}
+                className={loading ? 'loading' : ''}
               >
                 Confirmar Pedido
               </button>
               <button
-                onClick={cancelOrder}
-                style={{
-                  padding: '10px 20px',
-                  backgroundColor: '#e74c3c',
-                  color: '#fff',
-                  border: 'none',
-                  borderRadius: '5px',
-                  cursor: 'pointer'
-                }}
+                onClick={() => setShowModal(false)}
+                disabled={loading}
               >
                 Cancelar
               </button>

@@ -7,10 +7,12 @@ const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
   const handleLogin = async (e) => {
     e.preventDefault();
+    setLoading(true);
     try {
       await signInWithEmailAndPassword(auth, email, password);
       navigate('/orders-dashboard');
@@ -29,13 +31,14 @@ const Login = () => {
         default:
           setError('Error al iniciar sesión: ' + err.message);
       }
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <div>
+    <div className="page-container">
       <h1>Iniciar Sesión</h1>
-      {error && <p style={{ color: 'red' }}>{error}</p>}
       <form onSubmit={handleLogin}>
         <label>
           Correo:
@@ -44,7 +47,6 @@ const Login = () => {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
-            style={{ display: 'block', margin: '10px 0', padding: '8px' }}
           />
         </label>
         <label>
@@ -54,19 +56,13 @@ const Login = () => {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
-            style={{ display: 'block', margin: '10px 0', padding: '8px' }}
           />
         </label>
+        {error && <p style={{ color: 'red' }}>{error}</p>}
         <button
           type="submit"
-          style={{
-            padding: '10px 20px',
-            backgroundColor: '#2c3e50',
-            color: '#fff',
-            border: 'none',
-            borderRadius: '5px',
-            cursor: 'pointer'
-          }}
+          className={`login-button ${loading ? 'loading' : ''}`}
+          disabled={loading}
         >
           Iniciar Sesión
         </button>

@@ -8,9 +8,15 @@ const OrdersDashboard = () => {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('pending');
+  const [userEmail, setUserEmail] = useState('');
+  const [buttonLoading, setButtonLoading] = useState({});
   const navigate = useNavigate();
 
   useEffect(() => {
+    if (auth.currentUser) {
+      setUserEmail(auth.currentUser.email);
+    }
+
     const fetchOrders = async () => {
       try {
         const q = query(collection(db, 'orders'), where('status', '==', filter));
@@ -30,6 +36,7 @@ const OrdersDashboard = () => {
   }, [filter]);
 
   const handleCompleteOrder = async (orderId) => {
+    setButtonLoading(prev => ({ ...prev, [orderId]: true }));
     try {
       const orderRef = doc(db, 'orders', orderId);
       await updateDoc(orderRef, { status: 'completed' });
@@ -37,90 +44,104 @@ const OrdersDashboard = () => {
     } catch (error) {
       console.error('Error updating order status:', error);
       alert('Error al actualizar el estado del pedido: ' + error.message);
+    } finally {
+      setButtonLoading(prev => ({ ...prev, [orderId]: false }));
     }
   };
 
   const handleLogout = async () => {
+    setLoading(true);
     try {
       await signOut(auth);
       navigate('/login');
     } catch (error) {
       console.error('Error logging out:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
   if (loading) {
-    return <div>Cargando pedidos...</div>;
+    return <div className="page-container">Cargando pedidos...</div>;
   }
 
   return (
-    <div>
-      <h1>Pedidos</h1>
-      <button
-        onClick={handleLogout}
-        style={{
-          padding: '8px 16px',
-          backgroundColor: '#e74c3c',
-          color: '#fff',
-          border: 'none',
-          borderRadius: '5px',
-          cursor: 'pointer',
-          marginBottom: '20px'
-        }}
-      >
-        Cerrar Sesión
-      </button>
-      <div style={{ marginBottom: '20px' }}>
-        <label>
-          Filtrar por estado:
-          <select
-            value={filter}
-            onChange={(e) => setFilter(e.target.value)}
-            style={{ marginLeft: '10px', padding: '5px' }}
+    <div className="page-container">
+      <div className="dashboard-container">
+        <h1>Panel de Pedidos</h1>
+        <div className="dashboard-header">
+          <p>Bienvenido, {userEmail}</p>
+          <button
+            onClick={handleLogout}
+            className={`logout-button ${loading ? 'loading' : ''}`}
+            disabled={loading}
           >
-            <option value="pending">Pendientes</option>
-            <option value="completed">Completados</option>
-          </select>
-        </label>
-      </div>
-      {orders.length === 0 ? (
-        <p>No hay pedidos {filter === 'pending' ? 'pendientes' : 'completados'}.</p>
-      ) : (
-        <ul>
-          {orders.map(order => (
-            <li key={order.id}>
-              <h3>Pedido #{order.id}</h3>
-              <p><strong>Cliente/Mesa:</strong> {order.customerInfo}</p>
-              <p><strong>Total:</strong> ${order.total}</p>
-              <h4>Productos:</h4>
-              <ul>
-                {order.items.map(item => (
-                  <li key={item.productId}>
-                    {item.name} x{item.quantity} - ${item.price * item.quantity}
-                  </li>
+            Cerrar Sesión
+          </button>
+        </div>
+        <div className="filter-container">
+          <label>
+            Filtrar por estado:
+            <select
+              value={filter}
+              onChange={(e) => setFilter(e.target.value)}
+              className="filter-select"
+            >
+              <option value="pending">Pendientes</option>
+              <option value="completed">Completados</option>
+            </select>
+          </label>
+        </div>
+        {orders.length === 0 ? (
+          <p>No hay pedidos {filter === 'pending' ? 'pendientes' : 'completados'}.</p>
+        ) : (
+          <div className="table-container">
+            <table className="orders-table">
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Cliente/Mesa</th>
+                  <th>Total</th>
+                  <th>Productos</th>
+                  <th>Fecha</th>
+                  {filter === 'pending' && <th>Acción</th>}
+                </tr>
+              </thead>
+              <tbody>
+                {orders.map(order => (
+                  <tr key={order.id}>
+                    <td>#{order.id}</td>
+                    <td>{order.customerInfo}</td>
+                    <td>${order.total}</td>
+                    <td>
+                      <ul className="dashboard-items">
+                        {order.items.map(item => (
+                          <li key={item.productId}>
+                            {item.name} x{item.quantity} - ${item.price * item.quantity}
+                          </li>
+                        ))}
+                      </ul>
+                    </td>
+                    <td>{new Date(order.timestamp.seconds * 1000).toLocaleString()}</td>
+                    {filter === 'pending' && (
+                      <td>
+                        <button
+                          onClick={() => handleCompleteOrder(order.id)}
+                          className={`complete-button ${buttonLoading[order.id] ? 'loading' : ''}`}
+                          disabled={buttonLoading[order.id]}
+                          title="Marcar como completado"
+                        >
+                          ✔️
+                        </button>
+                      </td>
+                    )}
+                  </tr>
                 ))}
-              </ul>
-              <p><strong>Fecha:</strong> {new Date(order.timestamp.seconds * 1000).toLocaleString()}</p>
-              {filter === 'pending' && (
-                <button
-                  onClick={() => handleCompleteOrder(order.id)}
-                  style={{
-                    padding: '8px 16px',
-                    backgroundColor: '#27ae60',
-                    color: '#fff',
-                    border: 'none',
-                    borderRadius: '5px',
-                    cursor: 'pointer',
-                    marginTop: '10px'
-                  }}
-                >
-                  Marcar como Completado
-                </button>
-              )}
-            </li>
-          ))}
-        </ul>
-      )}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
     </div>
   );
 };

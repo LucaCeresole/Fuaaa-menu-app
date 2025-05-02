@@ -1,101 +1,59 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { db } from '../services/firebase';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, onSnapshot } from 'firebase/firestore';
 
 const OrderConfirmation = () => {
   const { orderId } = useParams();
-  const [showNotification, setShowNotification] = useState(true);
-  const [orderStatus, setOrderStatus] = useState('pending');
-  const [statusNotification, setStatusNotification] = useState(false);
+  const [order, setOrder] = useState(null);
+  const [notification, setNotification] = useState('¡Tu pedido #' + orderId + ' ha sido recibido!');
 
   useEffect(() => {
-    // Notificación inicial
-    const timer = setTimeout(() => {
-      setShowNotification(false);
-    }, 5000);
-    return () => clearTimeout(timer);
-  }, []);
-
-  useEffect(() => {
-    // Consultar estado del pedido cada 10 segundos
-    const checkOrderStatus = async () => {
-      try {
-        const orderRef = doc(db, 'orders', orderId);
-        const orderSnap = await getDoc(orderRef);
-        if (orderSnap.exists()) {
-          const status = orderSnap.data().status;
-          setOrderStatus(status);
-          if (status === 'completed') {
-            setStatusNotification(true);
-            setTimeout(() => setStatusNotification(false), 5000);
-          }
+    const orderRef = doc(db, 'orders', orderId);
+    const unsubscribe = onSnapshot(orderRef, (doc) => {
+      if (doc.exists()) {
+        setOrder({ id: doc.id, ...doc.data() });
+        if (doc.data().status === 'completed') {
+          setNotification('¡Tu pedido #' + orderId + ' está listo!');
+          setTimeout(() => setNotification(''), 5000);
         }
-      } catch (error) {
-        console.error('Error checking order status:', error);
       }
-    };
+    });
 
-    checkOrderStatus(); // Consulta inicial
-    const interval = setInterval(checkOrderStatus, 10000); // Cada 10 segundos
-    return () => clearInterval(interval);
-  }, [orderId]);
+    setTimeout(() => {
+      if (notification === '¡Tu pedido #' + orderId + ' ha sido recibido!') {
+        setNotification('');
+      }
+    }, 5000);
+
+    return () => unsubscribe();
+  }, [orderId, notification]);
+
+  if (!order) {
+    return <div className="page-container">Cargando...</div>;
+  }
 
   return (
-    <div>
-      {showNotification && (
-        <div
-          style={{
-            position: 'fixed',
-            top: '20px',
-            right: '20px',
-            backgroundColor: '#27ae60',
-            color: '#fff',
-            padding: '10px 20px',
-            borderRadius: '5px',
-            zIndex: 1000,
-            boxShadow: '0 2px 5px rgba(0, 0, 0, 0.2)'
-          }}
-        >
-          ¡Tu pedido #{orderId} ha sido recibido!
+    <div className="page-container">
+      <h1>Confirmación del Pedido</h1>
+      {notification && (
+        <div className="notification">
+          {notification}
         </div>
       )}
-      {statusNotification && (
-        <div
-          style={{
-            position: 'fixed',
-            top: '80px',
-            right: '20px',
-            backgroundColor: '#219653',
-            color: '#fff',
-            padding: '10px 20px',
-            borderRadius: '5px',
-            zIndex: 1000,
-            boxShadow: '0 2px 5px rgba(0, 0, 0, 0.2)'
-          }}
-        >
-          ¡Tu pedido #{orderId} está listo!
-        </div>
-      )}
-      <h1>¡Pedido Confirmado!</h1>
-      <p>Tu pedido ha sido recibido con éxito.</p>
-      <p><strong>ID del Pedido:</strong> {orderId}</p>
-      <p><strong>Estado:</strong> {orderStatus === 'pending' ? 'Pendiente' : 'Completado'}</p>
-      <p>Gracias por tu orden. Te notificaremos cuando esté listo.</p>
-      <Link
-        to="/menu"
-        style={{
-          display: 'inline-block',
-          padding: '10px 20px',
-          backgroundColor: '#2c3e50',
-          color: '#fff',
-          textDecoration: 'none',
-          borderRadius: '5px',
-          marginTop: '20px'
-        }}
-      >
-        Volver al Menú
-      </Link>
+      <h2>Detalles del Pedido</h2>
+      <p>ID: <strong>#{orderId}</strong></p>
+      <p><strong>Cliente/Mesa:</strong> {order.customerInfo}</p>
+      <h3>Productos:</h3>
+      <ul>
+        {order.items.map((item, index) => (
+          <li key={index}>
+            {item.name} x{item.quantity} - ${item.price * item.quantity}
+          </li>
+        ))}
+      </ul>
+      <p><strong>Total:</strong> ${order.total}</p>
+      <p><strong>Estado:</strong> {order.status === 'pending' ? 'Pendiente' : 'Completado'}</p>
     </div>
   );
 };

@@ -102,35 +102,56 @@ const Menu = () => {
             onChange={(e) => setCustomerInfo(e.target.value)}
             placeholder="Ej. Mesa 5"
           />
-          {errors.customerInfo && <p style={{ color: 'red' }}>{errors.customerInfo}</p>}
+          {errors.customerInfo && <p className="error-message">{errors.customerInfo}</p>}
         </label>
         <h2>Productos</h2>
-        <ul>
+        <ul className="product-list">
           {products.map(product => (
-            <li key={product.id}>
-              <h3>{product.name}</h3>
-              <p>Precio: ${product.price}</p>
-              <label>
-                Cantidad:
-                <input
-                  type="number"
-                  min="0"
-                  value={quantities[product.id] || ''}
-                  onChange={(e) => handleQuantityChange(product.id, e.target.value)}
+            <li key={product.id} className="product-card">
+              {product.imageUrl ? (
+                <img
+                  src={product.imageUrl}
+                  alt={product.name}
+                  className="product-image"
+                  onError={(e) => {
+                    e.target.style.display = 'none';
+                  }}
                 />
-              </label>
+              ) : (
+                <div
+                  className="product-image"
+                  style={{ background: '#ddd', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                >
+                  Sin imagen
+                </div>
+              )}
+              <div className="product-info">
+                <h3>{product.name}</h3>
+                <p>Precio: ${product.price}</p>
+                <label>
+                  Cantidad:
+                  <input
+                    type="number"
+                    min="0"
+                    value={quantities[product.id] || ''}
+                    onChange={(e) => handleQuantityChange(product.id, e.target.value)}
+                  />
+                </label>
+              </div>
             </li>
           ))}
         </ul>
-        {errors.items && <p style={{ color: 'red' }}>{errors.items}</p>}
-        <button
-          type="button"
-          onClick={handleReviewOrder}
-          disabled={loading}
-          className={loading ? 'loading' : ''}
-        >
-          Revisar Pedido
-        </button>
+        {errors.items && <p className="error-message">{errors.items}</p>}
+        <div className="form-actions">
+          <button
+            type="button"
+            onClick={handleReviewOrder}
+            disabled={loading}
+            className={loading ? 'loading' : ''}
+          >
+            Revisar Pedido
+          </button>
+        </div>
       </form>
 
       {showModal && (
